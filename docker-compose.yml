@@ -1,0 +1,53 @@
+version: '3.8'
+
+services:
+  db:
+    image: postgres:16.3-alpine
+    container_name: postgres-db
+    environment:
+      POSTGRES_DB: socialNetwork
+      POSTGRES_USER: psuser
+      POSTGRES_PASSWORD: pspass
+    networks:
+      - backend
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    ports:
+      - '5433:5432'
+    healthcheck:
+      test: ['CMD', 'pg_isready', '-d', 'socialNetwork', '-U', 'psuser']
+      interval: 5s
+      timeout: 3s
+      retries: 5
+    deploy:
+      resources:
+        limits:
+          cpus: '0.5'
+          memory: 256M
+
+  redis:
+    image: redis:6.2-alpine
+    restart: unless-stopped
+    container_name: redis
+    ports:
+      - '6380:6379'
+    command: redis-server --save 60 1 --loglevel warning
+
+  redis-commander:
+    container_name: redis-commander
+    hostname: redis-commander
+    image: rediscommander/redis-commander:latest
+    environment:
+      - REDIS_HOST=redis
+    ports:
+      - '127.0.0.1:8081:8081'
+    depends_on:
+      - redis
+    restart: unless-stopped
+
+volumes:
+  db-data:
+
+networks:
+  backend:
+    driver: bridge
